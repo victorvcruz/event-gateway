@@ -1,0 +1,9 @@
+.git
+.codegraph
+**/.DS_Store
+**/__pycache__
+*.pdf
+coverage.*
+experiments/results
+tests
+

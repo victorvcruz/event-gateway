@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "order.created",
+  "title": "order.created",
+  "description": "Emitido pelo OrderService quando um pedido é criado com sucesso.",
+  "type": "object",
+  "required": ["event_id", "event_type", "correlation_id", "timestamp", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identificador único do evento (idempotency key)."
+    },
+    "event_type": {
+      "type": "string",
+      "const": "order.created"
+    },
+    "correlation_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Chave de correlação da saga — propagada por todos os eventos."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {
+      "type": "object",
+      "required": ["order_id", "customer_id", "amount_cents", "items"],
+      "additionalProperties": false,
+      "properties": {
+        "order_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "customer_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "amount_cents": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Valor do pedido em centavos."
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["sku", "quantity"],
+            "additionalProperties": false,
+            "properties": {
+              "sku": { "type": "string", "minLength": 1 },
+              "quantity": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

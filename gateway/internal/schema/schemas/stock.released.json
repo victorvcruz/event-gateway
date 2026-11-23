@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "stock.released",
+  "title": "stock.released",
+  "description": "Emitido pelo InventoryService quando a reserva é liberada (compensação de payment.failed).",
+  "type": "object",
+  "required": ["event_id", "event_type", "correlation_id", "timestamp", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "event_type": { "type": "string", "const": "stock.released" },
+    "correlation_id": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "payload": {
+      "type": "object",
+      "required": ["reservation_id", "order_id", "released_at"],
+      "additionalProperties": false,
+      "properties": {
+        "reservation_id": { "type": "string", "format": "uuid" },
+        "order_id": { "type": "string", "format": "uuid" },
+        "released_at": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

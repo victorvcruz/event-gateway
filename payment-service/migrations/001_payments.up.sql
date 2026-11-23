@@ -1,0 +1,2 @@
+CREATE TABLE payments(payment_id UUID PRIMARY KEY,order_id UUID NOT NULL UNIQUE,amount_cents BIGINT NOT NULL,status VARCHAR(20) NOT NULL CHECK(status IN('PROCESSED','FAILED','REFUNDED','SKIPPED')),failure_reason TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT now(),updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE TABLE refund_requests(order_id UUID PRIMARY KEY,source_event_id UUID NOT NULL UNIQUE,requested_at TIMESTAMPTZ NOT NULL DEFAULT now());

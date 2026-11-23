@@ -1,0 +1,339 @@
+{
+  "analysis_seed": 20260828,
+  "bootstrap_resamples": 10000,
+  "created_at": "2026-08-30T16:40:49.797439+00:00",
+  "experiment": "ALL",
+  "git_commit": "57cedbfda73ccc9dc686b2bc24b8f5ff5eb3af4a",
+  "git_dirty": false,
+  "host": {
+    "hostname": "MacBook-Air-de-Filipe.local",
+    "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+    "python": "3.14.3"
+  },
+  "images": [
+    [
+      {
+        "ContainerName": "event-gateway-experiments-inventory-db-1",
+        "Created": "2026-08-13T19:18:20.22884453Z",
+        "ID": "sha256:c05eced0bdb41ea9b95a656472a6aa4d50cad0d8a2e33d14eb1c53fd6204f2ae",
+        "Platform": "linux/arm64/v8",
+        "Repository": "postgres",
+        "Size": 288111398,
+        "Tag": "16-alpine"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-fulfillment-migrations-1",
+        "Created": "2026-08-26T10:01:38.508423114-03:00",
+        "ID": "sha256:3f330bdee73f492b9eb48f5a79a991a5b25c1d2cf44509b1c85a0ab117c0b8b6",
+        "LastTagTime": "2026-08-30T13:40:17.279745582-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-fulfillment-migrations",
+        "Size": 19349500,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-notification-service-1",
+        "Created": "2026-08-28T10:24:27.199215526-03:00",
+        "ID": "sha256:1ba467d05dd51f0bf97ca364374cefc267b6cdacc7e9c98ca608184fe6b826cc",
+        "LastTagTime": "2026-08-30T13:40:20.619541188-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-notification-service",
+        "Size": 27795855,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-gateway-migrations-1",
+        "Created": "2026-08-28T10:27:54.19401368-03:00",
+        "ID": "sha256:36ea9ce75ad6795763a5250e3782a7fabb441861ea9318c6a18cd2851920a10c",
+        "LastTagTime": "2026-08-30T13:38:55.911919936-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-gateway-migrations",
+        "Size": 19537313,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-fulfillment-db-1",
+        "Created": "2026-08-13T19:18:20.22884453Z",
+        "ID": "sha256:c05eced0bdb41ea9b95a656472a6aa4d50cad0d8a2e33d14eb1c53fd6204f2ae",
+        "Platform": "linux/arm64/v8",
+        "Repository": "postgres",
+        "Size": 288111398,
+        "Tag": "16-alpine"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-order-service-1",
+        "Created": "2026-08-28T10:24:27.542630938-03:00",
+        "ID": "sha256:70dbe105e2dc5c2e860ab32edc3ddf45d1233650107d1320402962024cb8dd4f",
+        "LastTagTime": "2026-08-30T13:39:32.667401162-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-order-service",
+        "Size": 27883579,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-payments-db-1",
+        "Created": "2026-08-13T19:18:20.22884453Z",
+        "ID": "sha256:c05eced0bdb41ea9b95a656472a6aa4d50cad0d8a2e33d14eb1c53fd6204f2ae",
+        "Platform": "linux/arm64/v8",
+        "Repository": "postgres",
+        "Size": 288111398,
+        "Tag": "16-alpine"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-experiment-control-1",
+        "Created": "2026-08-30T13:39:01.242240522-03:00",
+        "ID": "sha256:150f6267c3c6c721f6855474044805432f6d7ae386a9cfbad0a3ac58536f928a",
+        "LastTagTime": "2026-08-30T13:39:01.323199522-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-experiment-control",
+        "Size": 33493432,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-fulfillment-service-1",
+        "Created": "2026-08-28T10:24:27.477719336-03:00",
+        "ID": "sha256:158ad797b72d446ff42ff55cd84ce677df30fea7861461aeb82d601c6c9d2458",
+        "LastTagTime": "2026-08-30T13:40:14.92511008-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-fulfillment-service",
+        "Size": 27805350,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-gateway-worker-1",
+        "Created": "2026-08-28T10:27:54.411241866-03:00",
+        "ID": "sha256:dbb23f398fa490b3b449218c091399c450755cb705145a3285a945695803dda1",
+        "LastTagTime": "2026-08-30T13:38:55.933071978-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-gateway-worker",
+        "Size": 28016354,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-inventory-service-1",
+        "Created": "2026-08-28T10:24:27.41908212-03:00",
+        "ID": "sha256:53cda74c89822f9e2124aa92b32554123216853414c494d011a4d9c4c39f32ec",
+        "LastTagTime": "2026-08-30T13:40:20.619912314-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-inventory-service",
+        "Size": 27809389,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-gateway-db-1",
+        "Created": "2026-08-13T19:18:20.22884453Z",
+        "ID": "sha256:c05eced0bdb41ea9b95a656472a6aa4d50cad0d8a2e33d14eb1c53fd6204f2ae",
+        "Platform": "linux/arm64/v8",
+        "Repository": "postgres",
+        "Size": 288111398,
+        "Tag": "16-alpine"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-notifications-db-1",
+        "Created": "2026-08-13T19:18:20.22884453Z",
+        "ID": "sha256:c05eced0bdb41ea9b95a656472a6aa4d50cad0d8a2e33d14eb1c53fd6204f2ae",
+        "Platform": "linux/arm64/v8",
+        "Repository": "postgres",
+        "Size": 288111398,
+        "Tag": "16-alpine"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-schema-registry-1",
+        "Created": "2024-02-13T05:23:57.986742934Z",
+        "ID": "sha256:0308cb67f8a86e6a57673153f0c4151e179ae558e65dda2108f70877b92d5841",
+        "Platform": "linux/arm64",
+        "Repository": "confluentinc/cp-schema-registry",
+        "Size": 2020457408,
+        "Tag": "7.6.0"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-inventory-migrations-1",
+        "Created": "2026-08-26T10:01:38.550542452-03:00",
+        "ID": "sha256:0b4336c4cbfaa84f4662c911b43ed06727a197fd4c24a7098360f0bc74c31df5",
+        "LastTagTime": "2026-08-30T13:40:18.852298756-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-inventory-migrations",
+        "Size": 19349416,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-notification-migrations-1",
+        "Created": "2026-08-26T10:01:27.854003318-03:00",
+        "ID": "sha256:4b3360588e6c2097df51592281d66f97eeaedb4403edb12619e412eeb3e7b2f6",
+        "LastTagTime": "2026-08-30T13:40:08.380762221-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-notification-migrations",
+        "Size": 17302030,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-payment-worker-1",
+        "Created": "2026-08-28T10:24:27.527657498-03:00",
+        "ID": "sha256:964b9e530a69269523f14d10ca5ac728a7a74bc320dbfea6b92b66f30e88baae",
+        "LastTagTime": "2026-08-30T13:40:16.597862056-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-payment-worker",
+        "Size": 24496596,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-prometheus-1",
+        "Created": "2024-03-19T11:17:43.916172272Z",
+        "ID": "sha256:3878d63c1089f4d06b37938781eaebca8fb4e6b9850fa5bcc9f271b05baa7bfd",
+        "Platform": "linux/arm64/v8",
+        "Repository": "prom/prometheus",
+        "Size": 255816055,
+        "Tag": "v2.51.0"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-payment-service-1",
+        "Created": "2026-08-28T10:24:27.463379147-03:00",
+        "ID": "sha256:092be1e8efef33299be8ddf4dbb2d9d4295a388fdb4629c049bf70f1720f4137",
+        "LastTagTime": "2026-08-30T13:40:13.779002599-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-payment-service",
+        "Size": 27808989,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-kafka-1",
+        "Created": "2024-02-13T05:21:55.814433649Z",
+        "ID": "sha256:57debb9adf7af8671f8fc968cbf2380aad4327cce1c2fb7ed7f2d7ed9e7c7a01",
+        "Platform": "linux/arm64",
+        "Repository": "confluentinc/cp-kafka",
+        "Size": 833307386,
+        "Tag": "7.6.0"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-inventory-worker-1",
+        "Created": "2026-08-28T10:24:27.205774994-03:00",
+        "ID": "sha256:35d99be844df0ecdfe4a086f62c00994311c36ce440e283f5ed9bd151cf11eaa",
+        "LastTagTime": "2026-08-30T13:40:20.161631566-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-inventory-worker",
+        "Size": 24496271,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-gateway-server-1",
+        "Created": "2026-08-28T10:27:54.950243884-03:00",
+        "ID": "sha256:67aaa68515f091a6be62a7224c204b929f1706c98772c92977b622843bca110f",
+        "LastTagTime": "2026-08-30T13:39:01.117702606-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-gateway-server",
+        "Size": 30584776,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-payment-migrations-1",
+        "Created": "2026-08-26T10:18:42.113384763-03:00",
+        "ID": "sha256:43506eb9da59b80e29257f5577cb34aea2143c5a49fe38b93d7493040c07c8d9",
+        "LastTagTime": "2026-08-30T13:40:20.599275727-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-payment-migrations",
+        "Size": 19349492,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-orders-db-1",
+        "Created": "2026-08-13T19:18:20.22884453Z",
+        "ID": "sha256:c05eced0bdb41ea9b95a656472a6aa4d50cad0d8a2e33d14eb1c53fd6204f2ae",
+        "Platform": "linux/arm64/v8",
+        "Repository": "postgres",
+        "Size": 288111398,
+        "Tag": "16-alpine"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-schema-init-1",
+        "Created": "2026-08-28T10:27:54.203802741-03:00",
+        "ID": "sha256:4de58611e84299f7efb4d7f213f221ea37c227bae2e97dae918ab6aad801e27f",
+        "LastTagTime": "2026-08-30T13:38:55.930358978-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-schema-init",
+        "Size": 16196551,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-fulfillment-worker-1",
+        "Created": "2026-08-28T10:24:25.995183018-03:00",
+        "ID": "sha256:44491e2fa5f194d4d37288687fb130442f5cff7e11087fdbdd547234f47c01e7",
+        "LastTagTime": "2026-08-30T13:40:18.514932772-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-fulfillment-worker",
+        "Size": 24496263,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-order-migrations-1",
+        "Created": "2026-08-26T10:01:27.509351889-03:00",
+        "ID": "sha256:f4316a1e54ca57d315c58483793866a0120fdf5c97353e6ff8601d8bba55caa5",
+        "LastTagTime": "2026-08-30T13:40:20.096586757-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-order-migrations",
+        "Size": 19349472,
+        "Tag": "latest"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-kafka-init-1",
+        "Created": "2024-02-13T05:21:55.814433649Z",
+        "ID": "sha256:57debb9adf7af8671f8fc968cbf2380aad4327cce1c2fb7ed7f2d7ed9e7c7a01",
+        "Platform": "linux/arm64",
+        "Repository": "confluentinc/cp-kafka",
+        "Size": 833307386,
+        "Tag": "7.6.0"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-control-db-1",
+        "Created": "2026-08-13T19:18:20.22884453Z",
+        "ID": "sha256:c05eced0bdb41ea9b95a656472a6aa4d50cad0d8a2e33d14eb1c53fd6204f2ae",
+        "Platform": "linux/arm64/v8",
+        "Repository": "postgres",
+        "Size": 288111398,
+        "Tag": "16-alpine"
+      },
+      {
+        "ContainerName": "event-gateway-experiments-order-worker-1",
+        "Created": "2026-08-28T10:24:27.188168134-03:00",
+        "ID": "sha256:5e5a7fa4734d9f9bc3eb21e25a3bef330c03d648b418d9ee447bbd5cf2443832",
+        "LastTagTime": "2026-08-30T13:40:20.890881487-03:00",
+        "Platform": "linux/arm64",
+        "Repository": "event-gateway-experiments-order-worker",
+        "Size": 24496116,
+        "Tag": "latest"
+      }
+    ]
+  ],
+  "k6_image": {
+    "id": "sha256:b47dc998f5c29e497425ce62059bf9da30caa1be2d074b84f2a3f2a217e9509b",
+    "reference": "grafana/k6:2.1.0"
+  },
+  "official": true,
+  "outages_seconds": [30, 60, 120],
+  "ports": {
+    "CONTROL_DB_PORT": "25439",
+    "EXPERIMENT_CONTROL_PORT": "28086",
+    "FULFILLMENT_DB_PORT": "25436",
+    "FULFILLMENT_PORT": "28084",
+    "GATEWAY_DB_PORT": "25438",
+    "GATEWAY_METRICS_PORT": "29090",
+    "GATEWAY_PORT": "28080",
+    "GATEWAY_WORKER_METRICS_PORT": "29091",
+    "INVENTORY_DB_PORT": "25435",
+    "INVENTORY_PORT": "28083",
+    "KAFKA_PORT": "29092",
+    "NOTIFICATIONS_DB_PORT": "25437",
+    "NOTIFICATION_PORT": "28085",
+    "ORDERS_DB_PORT": "25433",
+    "ORDER_PORT": "28081",
+    "PAYMENTS_DB_PORT": "25434",
+    "PAYMENT_PORT": "28082",
+    "PROMETHEUS_PORT": "29099",
+    "SCHEMA_REGISTRY_PORT": "28181"
+  },
+  "repetitions": 5,
+  "run_id": "run-20260830T134049Z-bc4aacf8",
+  "samples": 100,
+  "seed": 20260828,
+  "source_sha256": "cb7a9a72faf67c271e3d76485c3da807e1f390c038f3ba89e10f834077aec2ca",
+  "warmups": 20
+}

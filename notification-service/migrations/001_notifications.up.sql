@@ -1,0 +1,1 @@
+CREATE TABLE notifications(event_id UUID PRIMARY KEY,event_type VARCHAR(255) NOT NULL,order_id UUID NOT NULL,correlation_id VARCHAR(255) NOT NULL,message TEXT NOT NULL,channel VARCHAR(20) NOT NULL DEFAULT 'log',delivered_at TIMESTAMPTZ NOT NULL DEFAULT now());

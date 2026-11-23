@@ -1,0 +1,160 @@
+{
+  "title": "Event Gateway — Dispatch (Kafka → subscribers)",
+  "uid": "event-gateway-dispatch",
+  "tags": ["event-gateway", "dispatch", "consumer"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "time": {"from": "now-15m", "to": "now"},
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Backlog dispatch_outbox (PENDING)",
+      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {
+          "expr": "gateway_dispatch_pending_gauge",
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 100}, {"color": "red", "value": 1000}]}}},
+      "options": {"colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Consumido do Kafka (persisted)",
+      "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {
+          "expr": "sum(gateway_dispatch_consumed_total{outcome=\"persisted\"})",
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "green"}}}
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Reentregas absorvidas (duplicate)",
+      "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {
+          "expr": "sum(gateway_dispatch_consumed_total{outcome=\"duplicate\"})",
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "blue"}}}
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Dead-letter dispatch (HTTP)",
+      "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {
+          "expr": "sum(gateway_dispatch_dead_letter_total)",
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "red"}}}
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Consumer Kafka por outcome (rps)",
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(gateway_dispatch_consumed_total[1m])) by (outcome)",
+          "legendFormat": "{{outcome}}",
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}},
+      "options": {"legend": {"showLegend": true, "displayMode": "table", "placement": "bottom", "calcs": ["sum"]}}
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Latência de dispatch: INSERT PENDING → UPDATE SENT (p50/p95/p99)",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(gateway_dispatch_latency_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p50",
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(gateway_dispatch_latency_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p95",
+          "refId": "B",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(gateway_dispatch_latency_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p99",
+          "refId": "C",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "s", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.05}]}}},
+      "options": {"legend": {"showLegend": true, "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"]}}
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Tentativas HTTP por subscriber e outcome (rps)",
+      "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(gateway_dispatch_attempted_total[1m])) by (service_id, outcome)",
+          "legendFormat": "{{service_id}} — {{outcome}}",
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}},
+      "options": {"legend": {"showLegend": true, "displayMode": "table", "placement": "right", "calcs": ["sum"]}}
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Dead-letter dispatch por subscriber",
+      "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(gateway_dispatch_dead_letter_total) by (service_id, event_type)",
+          "legendFormat": "{{service_id}} / {{event_type}}",
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "options": {"legend": {"showLegend": true, "displayMode": "table", "placement": "right"}}
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Kafka consumer lag (por tópico)",
+      "gridPos": {"x": 0, "y": 20, "w": 24, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(gateway_dispatch_kafka_lag_gauge) by (topic)",
+          "legendFormat": "{{topic}}",
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "options": {"legend": {"showLegend": true, "displayMode": "table", "placement": "right", "calcs": ["last", "max"]}}
+    }
+  ]
+}

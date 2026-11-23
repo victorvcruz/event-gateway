@@ -1,0 +1,158 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Event Gateway — Configuração
+# Todas as chaves podem ser sobrescritas por variáveis de ambiente:
+#   Ex: GATEWAY_SERVER_PORT=9090
+# ─────────────────────────────────────────────────────────────────────────────
+
+server:
+  port: 8080
+  read_timeout:  10s
+  write_timeout: 30s
+  idle_timeout:  60s
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Banco de dados exclusivo do Gateway
+# ─────────────────────────────────────────────────────────────────────────────
+database:
+  dsn: "postgres://gateway:secret@gateway-db:5432/gateway_db?sslmode=disable"
+  max_open_conns: 20
+  max_idle_conns: 5
+  conn_max_lifetime: 30m
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Kafka — transporte de eventos
+# ─────────────────────────────────────────────────────────────────────────────
+kafka:
+  brokers:
+    - "kafka:9092"
+  consumer_group: "event-gateway"
+  # Todos os tópicos que o Gateway consome (um por event_type publicado pelos serviços)
+  topics:
+    - "order.created"
+    - "order.cancelled"
+    - "payment.processed"
+    - "payment.failed"
+    - "payment.refunded"
+    - "stock.reserved"
+    - "stock.failed"
+    - "stock.released"
+    - "order.fulfilled"
+  producer:
+    acks:             "all"     # aguarda confirmação de todos os ISR
+    retries:          5
+    retry_backoff_ms: 100
+    compression:      "snappy"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Schema Registry — governança de contratos
+# ─────────────────────────────────────────────────────────────────────────────
+schema_registry:
+  endpoint:       "http://schema-registry:8081"
+  group_name:     "tcc-poc"
+  format:         "JSON"
+  compatibility:  "FULL_TRANSITIVE"
+  request_timeout: 2s
+  # Cache local de schemas para reduzir latência de validação
+  cache:
+    enabled: true
+    ttl:     5m
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Relay Worker — lê gateway_outbox e publica no Kafka
+# ─────────────────────────────────────────────────────────────────────────────
+relay:
+  poll_interval:    500ms
+  batch_size:       100        # eventos por ciclo (SELECT FOR UPDATE SKIP LOCKED)
+  max_retries:      6
+  # Backoff exponencial: 1s → 2s → 4s → 8s → 16s → dead-letter
+  initial_backoff:  1s
+  max_backoff:      30s
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Dispatcher — consome Kafka e faz POST /dispatch para os serviços
+# Três blocos: worker (loop), consumer (Kafka) e http (cliente dos subscribers).
+# ─────────────────────────────────────────────────────────────────────────────
+dispatcher:
+  worker:
+    batch_size:    100          # linhas por ciclo (SELECT FOR UPDATE SKIP LOCKED)
+    poll_interval: 500ms
+    max_retries:   6            # tentativa inicial + cinco retries; depois dead_letter
+    backoff:
+      base:        1s           # next_attempt_at = now() + base * 2^retry_count
+  consumer:
+    group_id:        "gateway-dispatcher"
+    session_timeout: 10s
+    # Demais parâmetros (heartbeat.interval, max.poll.records, etc.) usam defaults do franz-go.
+  http:
+    per_attempt_timeout: 5s     # timeout de UMA chamada POST /dispatch (não do ciclo total)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Observabilidade
+# ─────────────────────────────────────────────────────────────────────────────
+observability:
+  metrics:
+    enabled: true
+    port:    9090              # Prometheus scrape endpoint: GET /metrics
+  log:
+    level:  "info"             # debug | info | warn | error
+    format: "json"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Assinaturas estáticas — mapa event_type → serviços consumidores
+# Cada entrada define quais serviços recebem POST /dispatch para aquele tipo.
+# Ordem dentro de cada lista não garante ordem de entrega (dispatches concorrentes).
+# ─────────────────────────────────────────────────────────────────────────────
+subscriptions:
+
+  - event_type: "order.created"
+    consumers:
+      - id:  "payment-service"
+        url: "http://payment-service:8082/dispatch"
+      - id:  "inventory-service"
+        url: "http://inventory-service:8083/dispatch"
+
+  - event_type: "order.cancelled"
+    consumers:
+      - id:  "notification-service"
+        url: "http://notification-service:8085/dispatch"
+
+  - event_type: "payment.processed"
+    consumers:
+      - id:  "fulfillment-service"
+        url: "http://fulfillment-service:8084/dispatch"
+
+  - event_type: "payment.failed"
+    consumers:
+      - id:  "order-service"
+        url: "http://order-service:8081/dispatch"
+      - id:  "inventory-service"
+        url: "http://inventory-service:8083/dispatch"
+
+  - event_type: "payment.refunded"
+    consumers:
+      - id:  "notification-service"
+        url: "http://notification-service:8085/dispatch"
+
+  - event_type: "stock.reserved"
+    consumers:
+      - id:  "fulfillment-service"
+        url: "http://fulfillment-service:8084/dispatch"
+
+  - event_type: "stock.failed"
+    consumers:
+      - id:  "order-service"
+        url: "http://order-service:8081/dispatch"
+      - id:  "payment-service"
+        url: "http://payment-service:8082/dispatch"
+
+  - event_type: "stock.released"
+    consumers:
+      - id:  "notification-service"
+        url: "http://notification-service:8085/dispatch"
+
+  - event_type: "order.fulfilled"
+    consumers:
+      - id:  "notification-service"
+        url: "http://notification-service:8085/dispatch"
+      - id:  "order-service"
+        url: "http://order-service:8081/dispatch"

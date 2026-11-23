@@ -1,0 +1,441 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# TCC PoC — Stack completo
+# Subir tudo: docker compose up -d
+# Parar e limpar volumes: docker compose down -v
+# ─────────────────────────────────────────────────────────────────────────────
+
+x-postgres-common: &postgres-common
+  image: postgres:16-alpine
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+    interval: 5s
+    timeout: 5s
+    retries: 10
+
+x-service-common: &service-common
+  restart: unless-stopped
+  depends_on:
+    kafka:
+      condition: service_healthy
+    schema-registry:
+      condition: service_healthy
+
+networks:
+  tcc-net:
+    driver: bridge
+
+volumes:
+  gateway-db-data:
+  orders-db-data:
+  payments-db-data:
+  inventory-db-data:
+  fulfillment-db-data:
+  notifications-db-data:
+  kafka-data:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+
+services:
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Kafka (KRaft — sem Zookeeper)
+  # ───────────────────────────────────────────────────────────────────────────
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    networks: [tcc-net]
+    ports:
+      - "${KAFKA_PORT:-9092}:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+
+  # Cria os tópicos na primeira inicialização
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.0
+    networks: [tcc-net]
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      "
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic order.created      --partitions 6 --replication-factor 1 &&
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic order.cancelled    --partitions 6 --replication-factor 1 &&
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic payment.processed  --partitions 6 --replication-factor 1 &&
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic payment.failed     --partitions 6 --replication-factor 1 &&
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic payment.refunded   --partitions 6 --replication-factor 1 &&
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic stock.reserved     --partitions 6 --replication-factor 1 &&
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic stock.failed       --partitions 6 --replication-factor 1 &&
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic stock.released     --partitions 6 --replication-factor 1 &&
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic order.fulfilled    --partitions 6 --replication-factor 1 &&
+      echo 'Todos os tópicos criados.'
+      "
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Kafka UI (Provectus) — GET http://localhost:8180
+  # ───────────────────────────────────────────────────────────────────────────
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    networks: [tcc-net]
+    ports:
+      - "${KAFKA_UI_PORT:-8180}:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Schema Registry (Confluent)
+  # ───────────────────────────────────────────────────────────────────────────
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.6.0
+    networks: [tcc-net]
+    ports:
+      - "${SCHEMA_REGISTRY_PORT:-8181}:8081"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "kafka:9092"
+      SCHEMA_REGISTRY_LISTENERS: "http://0.0.0.0:8081"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/subjects || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  schema-init:
+    build:
+      context: ..
+      dockerfile: gateway/cmd/schema-init/Dockerfile
+    networks: [tcc-net]
+    depends_on:
+      schema-registry:
+        condition: service_healthy
+    restart: "no"
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Bancos de Dados
+  # ───────────────────────────────────────────────────────────────────────────
+  gateway-db:
+    <<: *postgres-common
+    networks: [tcc-net]
+    ports:
+      - "${GATEWAY_DB_PORT:-5438}:5432"
+    environment:
+      POSTGRES_USER: gateway
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: gateway_db
+    volumes:
+      - gateway-db-data:/var/lib/postgresql/data
+
+  orders-db:
+    <<: *postgres-common
+    networks: [tcc-net]
+    ports:
+      - "${ORDERS_DB_PORT:-5433}:5432"
+    environment:
+      POSTGRES_USER: orders
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: orders_db
+    volumes:
+      - orders-db-data:/var/lib/postgresql/data
+
+  payments-db:
+    <<: *postgres-common
+    networks: [tcc-net]
+    ports:
+      - "${PAYMENTS_DB_PORT:-5434}:5432"
+    environment:
+      POSTGRES_USER: payments
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: payments_db
+    volumes:
+      - payments-db-data:/var/lib/postgresql/data
+
+  inventory-db:
+    <<: *postgres-common
+    networks: [tcc-net]
+    ports:
+      - "${INVENTORY_DB_PORT:-5435}:5432"
+    environment:
+      POSTGRES_USER: inventory
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: inventory_db
+    volumes:
+      - inventory-db-data:/var/lib/postgresql/data
+
+  fulfillment-db:
+    <<: *postgres-common
+    networks: [tcc-net]
+    ports:
+      - "${FULFILLMENT_DB_PORT:-5436}:5432"
+    environment:
+      POSTGRES_USER: fulfillment
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: fulfillment_db
+    volumes:
+      - fulfillment-db-data:/var/lib/postgresql/data
+
+  notifications-db:
+    <<: *postgres-common
+    networks: [tcc-net]
+    ports:
+      - "${NOTIFICATIONS_DB_PORT:-5437}:5432"
+    environment:
+      POSTGRES_USER: notifications
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: notifications_db
+    volumes:
+      - notifications-db-data:/var/lib/postgresql/data
+
+  gateway-migrations:
+    build:
+      context: ..
+      dockerfile: gateway/cmd/migrations/Dockerfile
+    networks: [tcc-net]
+    depends_on:
+      gateway-db:
+        condition: service_healthy
+    restart: "no"
+
+  gateway-server:
+    build:
+      context: ..
+      dockerfile: gateway/cmd/server/Dockerfile
+    networks: [tcc-net]
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+      - "${GATEWAY_METRICS_PORT:-9090}:9090"
+    depends_on:
+      gateway-db:
+        condition: service_healthy
+      gateway-migrations:
+        condition: service_completed_successfully
+      schema-init:
+        condition: service_completed_successfully
+    environment:
+      HEALTHCHECK_URL: "http://127.0.0.1:8080/healthz"
+    healthcheck:
+      test: ["CMD", "/healthcheck"]
+      interval: 5s
+      timeout: 2s
+      retries: 12
+      start_period: 5s
+    restart: unless-stopped
+
+  gateway-worker:
+    build:
+      context: ..
+      dockerfile: gateway/cmd/worker/Dockerfile
+    networks: [tcc-net]
+    ports:
+      - "${GATEWAY_WORKER_METRICS_PORT:-9091}:9090"
+    depends_on:
+      gateway-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      gateway-migrations:
+        condition: service_completed_successfully
+      schema-init:
+        condition: service_completed_successfully
+      gateway-server:
+        condition: service_healthy
+    environment:
+      DISPATCH_TOKEN: "${DISPATCH_TOKEN:-local-dev-dispatch-token}"
+    restart: unless-stopped
+
+  order-migrations:
+    build: {context: .., dockerfile: infrastructure/service.Dockerfile, args: {MODULE: order-service, COMMAND: migrations}}
+    networks: [tcc-net]
+    depends_on: {orders-db: {condition: service_healthy}}
+    environment: {DATABASE_DSN: "postgres://orders:secret@orders-db:5432/orders_db?sslmode=disable"}
+    restart: "no"
+  order-service:
+    build: {context: .., dockerfile: infrastructure/service.Dockerfile, args: {MODULE: order-service, COMMAND: server}}
+    networks: [tcc-net]
+    ports: ["${ORDER_PORT:-8081}:8081"]
+    depends_on: {order-migrations: {condition: service_completed_successfully}}
+    environment: {SERVICE_PORT: "8081", DATABASE_DSN: "postgres://orders:secret@orders-db:5432/orders_db?sslmode=disable", DISPATCH_TOKEN: "${DISPATCH_TOKEN:-local-dev-dispatch-token}", HEALTHCHECK_URL: "http://127.0.0.1:8081/healthz"}
+    healthcheck: {test: ["CMD", "/healthcheck"], interval: 5s, timeout: 2s, retries: 12, start_period: 5s}
+    restart: unless-stopped
+  order-worker:
+    build: {context: .., dockerfile: infrastructure/service.Dockerfile, args: {MODULE: order-service, COMMAND: worker}}
+    networks: [tcc-net]
+    depends_on: {order-migrations: {condition: service_completed_successfully}, gateway-server: {condition: service_healthy}}
+    environment: {DATABASE_DSN: "postgres://orders:secret@orders-db:5432/orders_db?sslmode=disable", GATEWAY_URL: "http://gateway-server:8080"}
+    restart: unless-stopped
+
+  payment-migrations:
+    build: {context: .., dockerfile: infrastructure/service.Dockerfile, args: {MODULE: payment-service, COMMAND: migrations}}
+    networks: [tcc-net]
+    depends_on: {payments-db: {condition: service_healthy}}
+    environment: {DATABASE_DSN: "postgres://payments:secret@payments-db:5432/payments_db?sslmode=disable"}
+    restart: "no"
+  payment-service:
+    build: {context: .., dockerfile: infrastructure/service.Dockerfile, args: {MODULE: payment-service, COMMAND: server}}
+    networks: [tcc-net]
+    ports: ["${PAYMENT_PORT:-8082}:8082"]
+    depends_on: {payment-migrations: {condition: service_completed_successfully}}
+    environment: {SERVICE_PORT: "8082", DATABASE_DSN: "postgres://payments:secret@payments-db:5432/payments_db?sslmode=disable", PAYMENT_APPROVAL_LIMIT_CENTS: "100000", DISPATCH_TOKEN: "${DISPATCH_TOKEN:-local-dev-dispatch-token}", HEALTHCHECK_URL: "http://127.0.0.1:8082/healthz"}
+    healthcheck: {test: ["CMD", "/healthcheck"], interval: 5s, timeout: 2s, retries: 12, start_period: 5s}
+    restart: unless-stopped
+  payment-worker:
+    build: {context: .., dockerfile: infrastructure/service.Dockerfile, args: {MODULE: payment-service, COMMAND: worker}}
+    networks: [tcc-net]
+    depends_on: {payment-migrations: {condition: service_completed_successfully}, gateway-server: {condition: service_healthy}}
+    environment: {DATABASE_DSN: "postgres://payments:secret@payments-db:5432/payments_db?sslmode=disable", GATEWAY_URL: "http://gateway-server:8080"}
+    restart: unless-stopped
+
+  inventory-migrations:
+    build: {context: .., dockerfile: infrastructure/service.Dockerfile, args: {MODULE: inventory-service, COMMAND: migrations}}
+    networks: [tcc-net]
+    depends_on: {inventory-db: {condition: service_healthy}}
+    environment: {DATABASE_DSN: "postgres://inventory:secret@inventory-db:5432/inventory_db?sslmode=disable"}
+    restart: "no"
+  inventory-service:
+    build: {context: .., dockerfile: infrastructure/service.Dockerfile, args: {MODULE: inventory-service, COMMAND: server}}
+    networks: [tcc-net]
+    ports: ["${INVENTORY_PORT:-8083}:8083"]
+    depends_on: {inventory-migrations: {condition: service_completed_successfully}}
+    environment: {SERVICE_PORT: "8083", DATABASE_DSN: "postgres://inventory:secret@inventory-db:5432/inventory_db?sslmode=disable", DISPATCH_TOKEN: "${DISPATCH_TOKEN:-local-dev-dispatch-token}", HEALTHCHECK_URL: "http://127.0.0.1:8083/healthz"}
+    healthcheck: {test: ["CMD", "/healthcheck"], interval: 5s, timeout: 2s, retries: 12, start_period: 5s}
+    restart: unless-stopped
+  inventory-worker:
+    build: {context: .., dockerfile: infrastructure/service.Dockerfile, args: {MODULE: inventory-service, COMMAND: worker}}
+    networks: [tcc-net]
+    depends_on: {inventory-migrations: {condition: service_completed_successfully}, gateway-server: {condition: service_healthy}}
+    environment: {DATABASE_DSN: "postgres://inventory:secret@inventory-db:5432/inventory_db?sslmode=disable", GATEWAY_URL: "http://gateway-server:8080"}
+    restart: unless-stopped
+
+  fulfillment-migrations:
+    build: {context: .., dockerfile: infrastructure/service.Dockerfile, args: {MODULE: fulfillment-service, COMMAND: migrations}}
+    networks: [tcc-net]
+    depends_on: {fulfillment-db: {condition: service_healthy}}
+    environment: {DATABASE_DSN: "postgres://fulfillment:secret@fulfillment-db:5432/fulfillment_db?sslmode=disable"}
+    restart: "no"
+  fulfillment-service:
+    build: {context: .., dockerfile: infrastructure/service.Dockerfile, args: {MODULE: fulfillment-service, COMMAND: server}}
+    networks: [tcc-net]
+    ports: ["${FULFILLMENT_PORT:-8084}:8084"]
+    depends_on: {fulfillment-migrations: {condition: service_completed_successfully}}
+    environment: {SERVICE_PORT: "8084", DATABASE_DSN: "postgres://fulfillment:secret@fulfillment-db:5432/fulfillment_db?sslmode=disable", DISPATCH_TOKEN: "${DISPATCH_TOKEN:-local-dev-dispatch-token}", HEALTHCHECK_URL: "http://127.0.0.1:8084/healthz"}
+    healthcheck: {test: ["CMD", "/healthcheck"], interval: 5s, timeout: 2s, retries: 12, start_period: 5s}
+    restart: unless-stopped
+  fulfillment-worker:
+    build: {context: .., dockerfile: infrastructure/service.Dockerfile, args: {MODULE: fulfillment-service, COMMAND: worker}}
+    networks: [tcc-net]
+    depends_on: {fulfillment-migrations: {condition: service_completed_successfully}, gateway-server: {condition: service_healthy}}
+    environment: {DATABASE_DSN: "postgres://fulfillment:secret@fulfillment-db:5432/fulfillment_db?sslmode=disable", GATEWAY_URL: "http://gateway-server:8080"}
+    restart: unless-stopped
+
+  notification-migrations:
+    build: {context: .., dockerfile: infrastructure/service.Dockerfile, args: {MODULE: notification-service, COMMAND: migrations}}
+    networks: [tcc-net]
+    depends_on: {notifications-db: {condition: service_healthy}}
+    environment: {DATABASE_DSN: "postgres://notifications:secret@notifications-db:5432/notifications_db?sslmode=disable"}
+    restart: "no"
+  notification-service:
+    build: {context: .., dockerfile: infrastructure/service.Dockerfile, args: {MODULE: notification-service, COMMAND: server}}
+    networks: [tcc-net]
+    ports: ["${NOTIFICATION_PORT:-8085}:8085"]
+    depends_on: {notification-migrations: {condition: service_completed_successfully}}
+    environment: {SERVICE_PORT: "8085", DATABASE_DSN: "postgres://notifications:secret@notifications-db:5432/notifications_db?sslmode=disable", DISPATCH_TOKEN: "${DISPATCH_TOKEN:-local-dev-dispatch-token}", HEALTHCHECK_URL: "http://127.0.0.1:8085/healthz"}
+    healthcheck: {test: ["CMD", "/healthcheck"], interval: 5s, timeout: 2s, retries: 12, start_period: 5s}
+    restart: unless-stopped
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Observabilidade — Prometheus + Grafana
+  # Prometheus scrapa gateway-server:9090 e gateway-worker:9090 (nomes internos
+  # da rede docker-compose). Externamente:
+  #   - Prometheus UI:  http://localhost:9099
+  #   - Grafana UI:     http://localhost:3000  (login anônimo Editor habilitado)
+  # ───────────────────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    networks: [tcc-net]
+    ports:
+      - "${PROMETHEUS_PORT:-9099}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+    restart: unless-stopped
+
+  # Loki — armazenamento de logs. Recebe streams do Promtail em :3100.
+  # Dashboards/Explore do Grafana consultam via datasource loki (uid=loki).
+  loki:
+    image: grafana/loki:3.0.0
+    networks: [tcc-net]
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    volumes:
+      - ./loki/config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/config.yml
+    restart: unless-stopped
+
+  # Promtail — colhe logs de TODOS os containers Docker via socket e envia ao
+  # Loki. Descoberta dinâmica: cada container vira uma stream com labels
+  # {container, compose_service, logstream, level}. Logs JSON do zap
+  # (gateway-server/gateway-worker) têm `level` extraído como label.
+  promtail:
+    image: grafana/promtail:3.0.0
+    networks: [tcc-net]
+    depends_on:
+      - loki
+    volumes:
+      - ./promtail/config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    networks: [tcc-net]
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      - prometheus
+      - loki
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Editor"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    restart: unless-stopped

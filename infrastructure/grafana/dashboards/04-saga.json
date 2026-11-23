@@ -1,0 +1,90 @@
+{
+  "title": "Event Gateway — Saga de pedidos",
+  "uid": "event-gateway-business-saga",
+  "tags": ["event-gateway", "saga", "business"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "time": {"from": "now-30m", "to": "now"},
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Sagas iniciadas",
+      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+      "targets": [{"expr": "sum(gateway_events_received_total{event_type=\"order.created\",outcome=\"accepted\"})", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "blue"}}}
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Pedidos concluídos",
+      "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+      "targets": [{"expr": "sum(gateway_events_received_total{event_type=\"order.fulfilled\",outcome=\"accepted\"})", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "green"}}}
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Pedidos cancelados",
+      "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+      "targets": [{"expr": "sum(gateway_events_received_total{event_type=\"order.cancelled\",outcome=\"accepted\"})", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "red"}}}
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Compensações",
+      "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+      "targets": [{"expr": "sum(gateway_events_received_total{event_type=~\"payment.refunded|stock.released\",outcome=\"accepted\"})", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "orange"}}}
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Eventos de negócio por tipo (eventos/s)",
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "targets": [{"expr": "sum(rate(gateway_events_received_total{outcome=\"accepted\"}[5m])) by (event_type)", "legendFormat": "{{event_type}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}],
+      "fieldConfig": {"defaults": {"unit": "eps"}},
+      "options": {"legend": {"showLegend": true, "displayMode": "table", "placement": "right"}}
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Duração de entrega da saga (p50/p95/p99)",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "histogram_quantile(0.50, sum(rate(gateway_dispatch_latency_seconds_bucket{event_type=\"order.fulfilled\"}[5m])) by (le))", "legendFormat": "p50", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "histogram_quantile(0.95, sum(rate(gateway_dispatch_latency_seconds_bucket{event_type=\"order.fulfilled\"}[5m])) by (le))", "legendFormat": "p95", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "histogram_quantile(0.99, sum(rate(gateway_dispatch_latency_seconds_bucket{event_type=\"order.fulfilled\"}[5m])) by (le))", "legendFormat": "p99", "refId": "C", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "options": {"legend": {"showLegend": true, "displayMode": "table", "placement": "bottom"}}
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Outboxes pendentes",
+      "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "gateway_outbox_pending_gauge", "legendFormat": "gateway ingest", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "gateway_dispatch_pending_gauge", "legendFormat": "gateway dispatch", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "business_outbox_rows{status=\"PENDING\"}", "legendFormat": "{{service_id}}", "refId": "C", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short"}}
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Retries e dead-letter por serviço",
+      "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "sum(rate(gateway_dispatch_attempted_total{outcome=\"retry\"}[5m])) by (service_id)", "legendFormat": "retry {{service_id}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "sum(gateway_dispatch_dead_letter_total) by (service_id)", "legendFormat": "dead {{service_id}}", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "business_outbox_rows{status=\"DEAD\"}", "legendFormat": "business dead {{service_id}}", "refId": "C", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "options": {"legend": {"showLegend": true, "displayMode": "table", "placement": "right"}}
+    }
+  ]
+}

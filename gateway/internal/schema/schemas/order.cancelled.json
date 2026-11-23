@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "order.cancelled",
+  "title": "order.cancelled",
+  "description": "Emitido pelo OrderService quando um pedido é cancelado (compensação).",
+  "type": "object",
+  "required": ["event_id", "event_type", "correlation_id", "timestamp", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "event_type": { "type": "string", "const": "order.cancelled" },
+    "correlation_id": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "payload": {
+      "type": "object",
+      "required": ["order_id", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "order_id": { "type": "string", "format": "uuid" },
+        "reason": {
+          "type": "string",
+          "enum": ["payment_failed", "stock_failed", "customer_request"],
+          "description": "Motivo do cancelamento."
+        }
+      }
+    }
+  }
+}

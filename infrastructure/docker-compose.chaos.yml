@@ -1,0 +1,126 @@
+services:
+  chaos-controller:
+    image: python:3.13-alpine
+    networks: [tcc-net]
+    ports:
+      - "${CHAOS_CONTROLLER_PORT:-18475}:8475"
+    environment:
+      CHAOS_CONTROLLER_PORT: "8475"
+    volumes:
+      - ../tests/chaos/controller.py:/controller.py:ro
+    command: ["python3", "/controller.py"]
+    restart: "no"
+
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.12.0
+    networks: [tcc-net]
+    ports:
+      - "${TOXIPROXY_PORT:-18474}:8474"
+    volumes:
+      - ./chaos/toxiproxy.json:/etc/toxiproxy.json:ro
+    command: ["-host=0.0.0.0", "-port=8474", "-config=/etc/toxiproxy.json"]
+    restart: "no"
+
+  gateway-server:
+    build:
+      args:
+        GO_BUILD_TAGS: chaos
+    environment:
+      EVENT_GATEWAY_CONFIG: /etc/gateway/chaos-config.yaml
+      CHAOS_CONTROLLER_URL: http://chaos-controller:8475
+    volumes:
+      - ./chaos/gateway-config.yaml:/etc/gateway/chaos-config.yaml:ro
+    restart: "no"
+
+  gateway-worker:
+    build:
+      args:
+        GO_BUILD_TAGS: chaos
+    depends_on:
+      toxiproxy:
+        condition: service_started
+    environment:
+      EVENT_GATEWAY_CONFIG: /etc/gateway/chaos-config.yaml
+      CHAOS_CONTROLLER_URL: http://chaos-controller:8475
+    volumes:
+      - ./chaos/gateway-config.yaml:/etc/gateway/chaos-config.yaml:ro
+    restart: "no"
+
+  order-service:
+    build:
+      args: {GO_BUILD_TAGS: chaos}
+    environment:
+      CHAOS_CONTROLLER_URL: http://chaos-controller:8475
+    restart: "no"
+
+  order-worker:
+    build:
+      args: {GO_BUILD_TAGS: chaos}
+    depends_on:
+      toxiproxy:
+        condition: service_started
+    environment:
+      GATEWAY_URL: http://toxiproxy:18080
+      CHAOS_CONTROLLER_URL: http://chaos-controller:8475
+    restart: "no"
+
+  payment-service:
+    build:
+      args: {GO_BUILD_TAGS: chaos}
+    environment:
+      CHAOS_CONTROLLER_URL: http://chaos-controller:8475
+    restart: "no"
+
+  payment-worker:
+    build:
+      args: {GO_BUILD_TAGS: chaos}
+    depends_on:
+      toxiproxy:
+        condition: service_started
+    environment:
+      GATEWAY_URL: http://toxiproxy:18080
+      CHAOS_CONTROLLER_URL: http://chaos-controller:8475
+    restart: "no"
+
+  inventory-service:
+    build:
+      args: {GO_BUILD_TAGS: chaos}
+    environment:
+      CHAOS_CONTROLLER_URL: http://chaos-controller:8475
+    restart: "no"
+
+  inventory-worker:
+    build:
+      args: {GO_BUILD_TAGS: chaos}
+    depends_on:
+      toxiproxy:
+        condition: service_started
+    environment:
+      GATEWAY_URL: http://toxiproxy:18080
+      CHAOS_CONTROLLER_URL: http://chaos-controller:8475
+    restart: "no"
+
+  fulfillment-service:
+    build:
+      args: {GO_BUILD_TAGS: chaos}
+    environment:
+      CHAOS_CONTROLLER_URL: http://chaos-controller:8475
+    restart: "no"
+
+  fulfillment-worker:
+    build:
+      args: {GO_BUILD_TAGS: chaos}
+    depends_on:
+      toxiproxy:
+        condition: service_started
+    environment:
+      GATEWAY_URL: http://toxiproxy:18080
+      CHAOS_CONTROLLER_URL: http://chaos-controller:8475
+    restart: "no"
+
+  notification-service:
+    build:
+      args: {GO_BUILD_TAGS: chaos}
+    environment:
+      CHAOS_CONTROLLER_URL: http://chaos-controller:8475
+    restart: "no"

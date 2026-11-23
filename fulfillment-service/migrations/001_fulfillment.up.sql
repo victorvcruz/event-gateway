@@ -1,0 +1,1 @@
+CREATE TABLE fulfillment_state(order_id UUID PRIMARY KEY,payment_id UUID,reservation_id UUID,fulfillment_id UUID UNIQUE,fulfilled_at TIMESTAMPTZ,created_at TIMESTAMPTZ NOT NULL DEFAULT now(),updated_at TIMESTAMPTZ NOT NULL DEFAULT now());

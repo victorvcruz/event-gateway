@@ -1,0 +1,80 @@
+volumes:
+  control-db-data:
+
+services:
+  control-db:
+    image: postgres:16-alpine
+    networks: [tcc-net]
+    ports:
+      - "${CONTROL_DB_PORT:-25439}:5432"
+    environment:
+      POSTGRES_USER: control
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: control_db
+    volumes:
+      - control-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U control -d control_db"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: "no"
+
+  experiment-control:
+    build:
+      context: ..
+      dockerfile: gateway/cmd/experiment-control/Dockerfile
+    networks: [tcc-net]
+    ports:
+      - "${EXPERIMENT_CONTROL_PORT:-28086}:8086"
+    depends_on:
+      control-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      schema-init:
+        condition: service_completed_successfully
+    environment:
+      CONTROL_DATABASE_DSN: "postgres://control:secret@control-db:5432/control_db?sslmode=disable"
+      KAFKA_BROKERS: "kafka:9092"
+      SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      CONTROL_PORT: "8086"
+      HEALTHCHECK_URL: "http://127.0.0.1:8086/healthz"
+    healthcheck:
+      test: ["CMD", "/healthcheck"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    restart: "no"
+
+  # Política de tentativas ampliada, usada somente na execução suplementar do
+  # Experimento C (`--retry-policy extended`). Vazias, as variáveis são ignoradas
+  # e valem os padrões do código (6 tentativas, espera exponencial de 1 s).
+  order-worker:
+    environment:
+      OUTBOX_MAX_ATTEMPTS: "${EXPERIMENT_RETRY_MAX_ATTEMPTS:-}"
+      OUTBOX_MAX_BACKOFF: "${EXPERIMENT_RETRY_MAX_BACKOFF:-}"
+
+  gateway-worker:
+    environment:
+      GATEWAY_RELAY_MAX_RETRIES: "${EXPERIMENT_RETRY_MAX_ATTEMPTS:-}"
+      GATEWAY_RELAY_MAX_BACKOFF: "${EXPERIMENT_RETRY_MAX_BACKOFF:-}"
+
+  prometheus:
+    volumes:
+      - ./prometheus/experiments.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=24h"
+    restart: "no"
+
+  k6:
+    image: grafana/k6:2.1.0
+    profiles: [tools]
+    networks: [tcc-net]
+    user: "0:0"
+    volumes:
+      - ../experiments/k6:/scripts:ro
+      - ../experiments/results/raw:/results
+    entrypoint: ["k6"]

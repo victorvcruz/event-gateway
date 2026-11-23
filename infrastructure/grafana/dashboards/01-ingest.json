@@ -1,0 +1,128 @@
+{
+  "title": "Event Gateway — Ingest (POST /events)",
+  "uid": "event-gateway-ingest",
+  "tags": ["event-gateway", "ingest"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "time": {"from": "now-15m", "to": "now"},
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Rate — POST /events (rps)",
+      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {
+          "expr": "sum(rate(gateway_events_received_total[1m]))",
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps", "decimals": 2, "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}},
+      "options": {"colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Aceitos (accepted)",
+      "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {
+          "expr": "sum(gateway_events_received_total{outcome=\"accepted\"})",
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "green"}}}
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "409 conflict (duplicatas)",
+      "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {
+          "expr": "sum(gateway_events_received_total{outcome=\"conflict\"})",
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "yellow"}}}
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Inválidos (422/400)",
+      "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {
+          "expr": "sum(gateway_events_received_total{outcome=~\"invalid|error\"})",
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "red"}}}
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "POST /events por outcome (rps)",
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(gateway_events_received_total[1m])) by (outcome)",
+          "legendFormat": "{{outcome}}",
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}},
+      "options": {"legend": {"showLegend": true, "displayMode": "table", "placement": "bottom", "calcs": ["sum"]}}
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Latência do POST /events (p50/p95/p99)",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(gateway_ingest_latency_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p50",
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(gateway_ingest_latency_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p95",
+          "refId": "B",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(gateway_ingest_latency_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p99",
+          "refId": "C",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "options": {"legend": {"showLegend": true, "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"]}}
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "POST /events por event_type (rps)",
+      "gridPos": {"x": 0, "y": 12, "w": 24, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(gateway_events_received_total{outcome=\"accepted\"}[1m])) by (event_type)",
+          "legendFormat": "{{event_type}}",
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}},
+      "options": {"legend": {"showLegend": true, "displayMode": "table", "placement": "right", "calcs": ["sum"]}}
+    }
+  ]
+}

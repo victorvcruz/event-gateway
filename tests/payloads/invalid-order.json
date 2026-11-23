@@ -1,0 +1,11 @@
+{
+  "event_id": "018f8b49-2222-7c1a-a1e1-88f1a11a3e23",
+  "event_type": "order.created",
+  "correlation_id": "saga-example-invalid",
+  "timestamp": "2026-08-11T12:00:00Z",
+  "payload": {
+    "order_id": "not-a-uuid",
+    "customer_id": "",
+    "amount_cents": "cento e noventa e nove"
+  }
+}

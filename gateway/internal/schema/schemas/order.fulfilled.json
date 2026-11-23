@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "order.fulfilled",
+  "title": "order.fulfilled",
+  "description": "Emitido pelo FulfillmentService após correlacionar payment.processed + stock.reserved.",
+  "type": "object",
+  "required": ["event_id", "event_type", "correlation_id", "timestamp", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "event_type": { "type": "string", "const": "order.fulfilled" },
+    "correlation_id": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "payload": {
+      "type": "object",
+      "required": ["fulfillment_id", "order_id", "dispatched_at"],
+      "additionalProperties": false,
+      "properties": {
+        "fulfillment_id": { "type": "string", "format": "uuid" },
+        "order_id": { "type": "string", "format": "uuid" },
+        "dispatched_at": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

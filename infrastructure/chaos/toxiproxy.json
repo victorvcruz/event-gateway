@@ -1,0 +1,8 @@
+[
+  {"name":"gateway_http","listen":"0.0.0.0:18080","upstream":"gateway-server:8080","enabled":true},
+  {"name":"order_callback","listen":"0.0.0.0:18081","upstream":"order-service:8081","enabled":true},
+  {"name":"payment_callback","listen":"0.0.0.0:18082","upstream":"payment-service:8082","enabled":true},
+  {"name":"inventory_callback","listen":"0.0.0.0:18083","upstream":"inventory-service:8083","enabled":true},
+  {"name":"fulfillment_callback","listen":"0.0.0.0:18084","upstream":"fulfillment-service:8084","enabled":true},
+  {"name":"notification_callback","listen":"0.0.0.0:18085","upstream":"notification-service:8085","enabled":true}
+]

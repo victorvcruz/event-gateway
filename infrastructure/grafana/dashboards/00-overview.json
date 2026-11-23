@@ -1,0 +1,102 @@
+{
+  "title": "Event Gateway — Overview",
+  "uid": "event-gateway-overview",
+  "tags": ["event-gateway", "overview"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "time": {"from": "now-1h", "to": "now"},
+  "refresh": "15s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Ingest rate (POST /events)",
+      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {"expr": "sum(rate(gateway_events_received_total[1m]))", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps", "decimals": 2}}
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Kafka publish rate",
+      "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {"expr": "sum(rate(gateway_events_published_total{outcome=\"ack\"}[1m]))", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps", "decimals": 2}}
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Dispatch consumed rate",
+      "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {"expr": "sum(rate(gateway_dispatch_consumed_total{outcome=\"persisted\"}[1m]))", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps", "decimals": 2}}
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Dispatch ACKs (rps)",
+      "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {"expr": "sum(rate(gateway_dispatch_attempted_total{outcome=\"ack\"}[1m]))", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps", "decimals": 2}}
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Backlogs — Outbox / Dispatch",
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 4},
+      "targets": [
+        {"expr": "gateway_outbox_pending_gauge", "legendFormat": "outbox", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "gateway_dispatch_pending_gauge", "legendFormat": "dispatch_outbox", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 100}, {"color": "red", "value": 1000}]}}},
+      "options": {"colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Total DEAD (Kafka + HTTP)",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 4},
+      "targets": [
+        {"expr": "sum(gateway_dead_letter_total)", "legendFormat": "Kafka relay", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "sum(gateway_dispatch_dead_letter_total)", "legendFormat": "HTTP dispatch", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "red"}}},
+      "options": {"colorMode": "value"}
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Fluxo end-to-end (rps)",
+      "gridPos": {"x": 0, "y": 8, "w": 24, "h": 8},
+      "targets": [
+        {"expr": "sum(rate(gateway_events_received_total{outcome=\"accepted\"}[1m]))", "legendFormat": "1. POST /events → accepted", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "sum(rate(gateway_events_published_total{outcome=\"ack\"}[1m]))", "legendFormat": "2. Kafka ACK (Relay)", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "sum(rate(gateway_dispatch_consumed_total{outcome=\"persisted\"}[1m]))", "legendFormat": "3. Consumer → dispatch_outbox", "refId": "C", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "sum(rate(gateway_dispatch_attempted_total{outcome=\"ack\"}[1m]))", "legendFormat": "4. POST /dispatch → ACK", "refId": "D", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}},
+      "options": {"legend": {"showLegend": true, "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"]}}
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Latências P95 (ingest / relay / dispatch)",
+      "gridPos": {"x": 0, "y": 16, "w": 24, "h": 8},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum(rate(gateway_ingest_latency_seconds_bucket[1m])) by (le))", "legendFormat": "ingest p95", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "histogram_quantile(0.95, sum(rate(gateway_relay_publish_latency_seconds_bucket[1m])) by (le))", "legendFormat": "relay p95", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "histogram_quantile(0.95, sum(rate(gateway_dispatch_latency_seconds_bucket[1m])) by (le))", "legendFormat": "dispatch p95", "refId": "C", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "options": {"legend": {"showLegend": true, "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"]}}
+    }
+  ]
+}

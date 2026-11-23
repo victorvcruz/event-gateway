@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "payment.processed",
+  "title": "payment.processed",
+  "description": "Emitido pelo PaymentService quando o pagamento é aprovado com sucesso.",
+  "type": "object",
+  "required": ["event_id", "event_type", "correlation_id", "timestamp", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "event_type": { "type": "string", "const": "payment.processed" },
+    "correlation_id": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "payload": {
+      "type": "object",
+      "required": ["payment_id", "order_id", "amount_cents", "charged_at"],
+      "additionalProperties": false,
+      "properties": {
+        "payment_id": { "type": "string", "format": "uuid" },
+        "order_id": { "type": "string", "format": "uuid" },
+        "amount_cents": { "type": "integer", "minimum": 1 },
+        "charged_at": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}
